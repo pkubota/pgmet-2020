@@ -132,12 +132,12 @@ SUBROUTINE Init_Class_Fields(nx,dx, coef_C )
  !  -C a(t+1,i-1)  + (1 + C) a(t+1,i)   =   a(t,i)                           |
  !                                                                           | equatios adv
  !                                                                           |
- !  ____                 ____   __         __                                |
- ! |                         | |             |                               |
- ! | (1 + C)      0     -C   | | a(t+1,1)    | =   a(t,1  ) <----------------
- ! | -C       (1 + C)    0   | | a(t+1,2)    | =   a(t,2  )
- ! |  0          -C   (1 + C)| | a(t+1,i-1)  | =   a(t,i+1)
- ! |____                 ____| |__         __|
+ !  ____                 ____   __           __                                |
+ ! |                         | |               |                               |
+ ! | (1 + C)      0     -C   | | a(t+1,i-1)    | =   a(t,1  ) <----------------
+ ! | -C       (1 + C)    0   | | a(t+1,i  )    | =   a(t,2  )
+ ! |  0          -C   (1 + C)| | a(t+1,i+1)    | =   a(t,i+1)
+ ! |____                 ____| |__           __|
  !
  !              A                    X         =     B
  !
@@ -149,16 +149,16 @@ SUBROUTINE Init_Class_Fields(nx,dx, coef_C )
  ! ilo = 1 
  ! ihi = iMax-1 
 
-  AA(0,ihi  ) =  0
-  AA(0,ilo  ) = -coef_C 
   DO i =ilo,ihi
       AA(i,i+1) = 0.0_r8 
       AA(i,i  ) = 1.0_r8 + coef_C 
       AA(i,i-1) = -coef_C
   END DO
-  AA(nx,ihi  ) =   1.0_r8 + coef_C 
-  AA(nx,ilo  ) =  0
-END SUBROUTINE Init_Class_Fields
+!  AA(ilo,ihi  ) =  -coef_C 
+!  AA(ilo,ilo  ) =  1.0_r8 + coef_C  
+!  AA(ihi,ihi  ) =  1.0_r8 + coef_C  
+!  AA(ihi,ilo  ) =  0
+  END SUBROUTINE Init_Class_Fields
 END MODULE Class_Fields
 
 
@@ -239,10 +239,11 @@ PROGRAM Main
  INTEGER      , PARAMETER :: nx=nn
  REAL (KIND=8) , PARAMETER :: xmin=0.0
  REAL (KIND=8) , PARAMETER :: xmax=1.0
- REAL (KIND=8) , PARAMETER :: C=0.5        ! # CFL number
-                                                                         !    [0.5, 1.0, 10.0]
-! REAL(KIND=8) , PARAMETER :: u = 10.0
+ REAL(KIND=8)  , PARAMETER :: u = 10.0
+! REAL (KIND=8) , PARAMETER :: C=0.5        ! # CFL number                                                                         !    [0.5, 1.0, 10.0]
  REAL (KIND=8) , PARAMETER :: Dx=(xmax - xmin)/(nx-1)
+ REAL (KIND=8) , PARAMETER :: C=0.5    !(u*dt/dx)    ! # CFL number
+
 ! REAL(KIND=8) , PARAMETER :: Dt=C*dx/u
  INTEGER      , PARAMETER :: ninteraction=400
  INTEGER :: i,j
@@ -265,7 +266,8 @@ SUBROUTINE Run()
   REAL (KIND=r8) :: b_pri_diagonal   (0:nx)
   REAL (KIND=r8) :: c_sup_diagonal   (0:nx)
   INTEGER :: test,irec
-
+  !ilo = 1 
+  !ihi = iMax-1
   DO i =ilo,ihi
 !     cc(i)= 0
 !     b (i)= 1.0 + C 
@@ -299,17 +301,20 @@ SUBROUTINE Run()
                            Anew          (ilo:ihi), &
                            ihi                      )
         !ihi = nx-1
-        Anew(ihi+1)= Anew(ihi)
-        A   (ilo:ihi)  = 0.0_r8
+        A   (ilo:ihi) = 0.0_r8
         A   (ilo:ihi) = Anew(ilo:ihi)
         !
         ! """ we don't explicitly update point 0, since it is identical 
         !            to N-1, so fill it here """ 
-        A(ilo+2) = A(ihi-0) 
-        A(ilo+1) = A(ihi-1)  
-        A(ilo+0) = A(ihi-2)  
-        A(ilo-1) = A(ihi-3)
-
+        IF(u > 0.0_r8)THEN
+        !   A(ilo+2) = A(ilo+1) 
+        !   A(ilo+1) = A(ilo  )  
+           A(ilo)   = A(ihi)  
+        ELSE
+        !   A(ihi-2) = A(ihi+1) 
+        !   A(ihi-1) = A(ihi  )  
+           A(ihi)   = A(ilo)  
+        END IF
   END DO    !   t += dt
   test=SchemeWriteCtl(ninteraction)
 

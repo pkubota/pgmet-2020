@@ -134,24 +134,24 @@ SUBROUTINE Init_Class_Fields(nx,dx, coef_C )
  !
  ! ................................................................
  !
- !  -C a(t+1,  0)  + (1 + C) a(t+1,1)  -  C* a(t+1,  2)  =   a(t,1)
- !  -C a(t+1,  1)  + (1 + C) a(t+1,2)  -  C* a(t+1,  3)  =   a(t,2)<---------------------------
- !  -C a(t+1,  2)  + (1 + C) a(t+1,3)  -  C* a(t+1,  4)  =   a(t,3)                           |
- !  -C a(t+1,  3)  + (1 + C) a(t+1,4)  -  C* a(t+1,  5)  =   a(t,4)                           |
- !  -C a(t+1,i-1)  + (1 + C) a(t+1,i)  -  C* a(t+1,i+1)  =   a(t,i)                           |
- !                                                                                            | equatios adv
- !                                                                                            |
- !  ____                              ____   __         __                                    |
- ! |                                      | |             |                                   |
- ! |  0           0      0        -C      | | a(t+0,0  )  | =   a(0,0  )                                 |
- ! | (1 + C)     -C      0         0      | | a(t+1,1  )  | =   a(t,1  ) <--------------------
- ! | -C       (1 + C)    -C        0      | | a(t+1,2  )  | =   a(t,2  )
- ! |  0          -C   (1 + C)     -C      | | a(t+1,3  )  | =   a(t,3  )
- ! |  0           0     -C      (1 + C)   | | a(t+1,4  )  | =   a(t,4  )
- ! |  -C          0      0         0      | | a(t+1,i-1)  | =   a(t,i+1)
- ! |____                              ____| |__         __|
+ !     -C a(t+1,  0)  + (1 + C) a(t+1,1)  -  C* a(t+1,  2)  =   a(t,1)
+ !     -C a(t+1,  1)  + (1 + C) a(t+1,2)  -  C* a(t+1,  3)  =   a(t,2)<---------------------------
+ !     -C a(t+1,  2)  + (1 + C) a(t+1,3)  -  C* a(t+1,  4)  =   a(t,3)                           |
+ !     -C a(t+1,  3)  + (1 + C) a(t+1,4)  -  C* a(t+1,  5)  =   a(t,4)                           |
+ !     -C a(t+1,i-1)  + (1 + C) a(t+1,i)  -  C* a(t+1,i+1)  =   a(t,i)                           |
+ !                                                                                               | equatios adv
+ !                                                                                               |
+ !     ____                              ____   __         __                                    |
+ !    |                                      | |             |                                   |
+ !x=0 |  0           0      0        -C      | | a(t+1,0  )  | =   a(0,0  )                      |
+ !x=1 | (1 + C)     -C      0         0      | | a(t+1,1  )  | =   a(t,1  ) <--------------------
+ !x=2 | -C       (1 + C)    -C        0      | | a(t+1,2  )  | =   a(t,2  )
+ !x=3 |  0          -C   (1 + C)     -C      | | a(t+1,3  )  | =   a(t,3  )
+ !x=4 |  0           0     -C      (1 + C)   | | a(t+1,4  )  | =   a(t,4  )
+ !x=5 |  -C          0      0         0      | | a(t+1,i-1)  | =   a(t,i+1)
+ !    |____                              ____| |__         __|
  !
- !              A                                X         =     B
+ !                 A                                X         =     B
  !
  !# create the matrix       
  !         # loop over rows [ilo,ihi] and construct the matrix.  This will 
@@ -160,15 +160,15 @@ SUBROUTINE Init_Class_Fields(nx,dx, coef_C )
  !
  ! ilo = 1 
  ! ihi = iMax-1 
-  AA(0,ihi  ) = -coef_C 
-  AA(0,ilo  ) = -coef_C    !-coef_C 
+ ! AA(0,ihi  ) = -coef_C 
+ ! AA(0,ilo  ) = -coef_C    !-coef_C 
   DO i =ilo,ihi
       AA(i,i+1) = -coef_C 
       AA(i,i  ) = 1.0_r8 + coef_C 
       AA(i,i-1) = -coef_C
   END DO
-  AA(nx,ihi  ) = -coef_C 
-  AA(nx,ilo  ) =  -coef_C 
+ ! AA(nx,ihi  ) = -coef_C 
+ ! AA(nx,ilo  ) =  -coef_C 
 END SUBROUTINE Init_Class_Fields
 END MODULE Class_Fields
 
@@ -193,7 +193,7 @@ CONTAINS
  SUBROUTINE InitClass_WritetoGrads()
     IMPLICIT NONE
    FileName=''
-   FileName='ImplicitLinearAdvection1D'
+   FileName='ImplicitLinearDiffusion1D'
    CtrlWriteDataFile=.TRUE.
  END SUBROUTINE InitClass_WritetoGrads
 
@@ -283,7 +283,8 @@ SUBROUTINE Run()
   REAL (KIND=r8) :: b_pri_diagonal   (0:nx)
   REAL (KIND=r8) :: c_sup_diagonal   (0:nx)
   INTEGER :: test,irec
-
+  !ilo = 1 
+  !ihi = iMax-1
   DO i =ilo,ihi
 !     cc(i)= 0
 !     b (i)= 1.0 + C 
@@ -317,8 +318,8 @@ SUBROUTINE Run()
                            Anew          (ilo:ihi), &
                            ihi                      )
         !ihi = nx-1
-        Anew(ihi+1)= Anew(ihi)
-        Anew(ilo-1)= Anew(ilo)
+        !Anew(ihi+1)= Anew(ihi)
+        Anew(ilo)= Anew(ilo+1)
         A   (ilo:ihi)  = 0.0_r8
         A   (ilo:ihi) = Anew(ilo:ihi)
         !
