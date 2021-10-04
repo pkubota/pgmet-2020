@@ -207,7 +207,34 @@ CONTAINS
     ok=0
    END FUNCTION AnaliticFunction
 
+ FUNCTION Solve_4thCS(Q,t,dt,dx)  result(rhs)
+   ! """
+   ! Centred in space right-hand-side computation (4nd order)
+   ! """
+   IMPLICIT NONE
+   REAL(KIND=r8), INTENT(IN) :: Q(Idim)
+   REAL(KIND=r8), INTENT(IN) :: t
+   REAL(KIND=r8), INTENT(IN) :: dt
+   REAL(KIND=r8), INTENT(IN) :: dx
+   INTEGER                   :: xb3,xb2,xb,xc,xf,xf2,xf3
+   REAL(KIND=r8)             :: dudx (SIZE(Q))
+   REAL(KIND=r8)             :: rhs  (SIZE(Q))
+   INTEGER                   :: N0
+   INTEGER                   :: N1
+   INTEGER                   :: i
 
+   N0=LBOUND(Q,DIM=1)
+   N1=UBOUND(Q,DIM=1)
+
+   DO i=N0,N1
+      CALL index2(i,xb3,xb2,xb,xc,xf,xf2,xf3)
+      dudx(xc)  = (-Q(xf2) + 8.0*Q(xf) - 8.0*Q(xb) + Q(xb2))/ &
+                                ((12*dx)) 
+
+      rhs(i) =  - (C)*( dudx(xc))
+   END DO
+
+ END FUNCTION Solve_4thCS 
 
  FUNCTION UpwindSpace(Q,t,dt,dx)  result(rhs)
    ! """
@@ -280,6 +307,8 @@ CONTAINS
       k1 = CentredSpace(Q            , t          , dt,dx)
    ELSE IF(EDO=='UpwindSpace')THEN
        k1 = UpwindSpace(Q            , t          , dt,dx)
+   ELSE IF(EDO=='Centred4thCS')THEN
+       k1 = Solve_4thCS(Q            , t          , dt,dx)
    END IF
     Qnp1=0.0  
     Qnp1 = Q + 1./1.*dt*( k1)
@@ -308,6 +337,9 @@ CONTAINS
    ELSE IF(EDO=='UpwindSpace')THEN
        k1 = UpwindSpace(Q            , t          , dt,dx)
        k2 = UpwindSpace(Q+     dt*k1 , t +     dt , dt,dx)   
+   ELSE IF(EDO=='Centred4thCS')THEN
+       k1 = Solve_4thCS(Q            , t          , dt,dx)
+       k2 = Solve_4thCS(Q+     dt*k1 , t +     dt , dt,dx)   
    END IF
     Qnp1=0.0  
     Qnp1 = Q + 1./2.*dt*( k1 + k2)
@@ -338,6 +370,10 @@ CONTAINS
        k1 = UpwindSpace(Q            , t          , dt,dx)
        k2 = UpwindSpace(Q+ 0.5*dt*k1 , t + 0.5*dt , dt,dx)
        k3 = UpwindSpace(Q+     dt*k2 , t +     dt , dt,dx)   
+   ELSE IF(EDO=='Centred4thCS')THEN
+       k1 = Solve_4thCS(Q            , t          , dt,dx)
+       k2 = Solve_4thCS(Q+     dt*k1 , t +     dt , dt,dx)   
+       k3 = Solve_4thCS(Q+     dt*k2 , t +     dt , dt,dx)   
    END IF
     Qnp1=0.0  
     Qnp1 = Q + 1./4.*dt*( k1 + 2.*k2 + k3  )
@@ -371,6 +407,11 @@ CONTAINS
        k2 = UpwindSpace(Q+ 0.5*dt*k1 , t + 0.5*dt , dt,dx)
        k3 = UpwindSpace(Q+ 0.5*dt*k2 , t + 0.5*dt , dt,dx)
        k4 = UpwindSpace(Q+     dt*k3 , t +     dt , dt,dx)   
+   ELSE IF(EDO=='Centred4thCS')THEN
+       k1 = Solve_4thCS(Q            , t          , dt,dx)
+       k2 = Solve_4thCS(Q+     dt*k1 , t +     dt , dt,dx)   
+       k3 = Solve_4thCS(Q+     dt*k2 , t +     dt , dt,dx)   
+       k4 = Solve_4thCS(Q+     dt*k3 , t +     dt , dt,dx)   
    END IF
     Qnp1=0.0  
     Qnp1 = Q + 1./6.*dt*( k1 + 2.*k2 + 2.*k3 + k4 )
@@ -409,6 +450,9 @@ CONTAINS
     END IF
 
  END FUNCTION Upstream
+!
+
+ 
 !   
    SUBROUTINE index(i,xb,xc,xf)
       IMPLICIT NONE
@@ -429,6 +473,68 @@ CONTAINS
       END IF
    END SUBROUTINE index
 
+   SUBROUTINE index2(i,xb3,xb2,xb,xc,xf,xf2,xf3)
+      IMPLICIT NONE
+      INTEGER, INTENT(IN   ) :: i
+      INTEGER, INTENT(OUT  ) :: xb3,xb2,xb,xc,xf,xf2,xf3
+      IF(i==1) THEN
+        xb3=Idim-2
+        xb2=Idim-1
+        xb=Idim
+        xc=i
+        xf=i+1
+        xf2=i+2
+        xf3=i+3
+      ELSE IF(i==2)THEN
+        xb3=Idim-1
+        xb2=Idim
+        xb=i-1
+        xc=i
+        xf=i+1
+        xf2=i+2
+        xf3=i+3
+      ELSE IF(i==3)THEN
+        xb3=Idim
+        xb2=i-2
+        xb=i-1
+        xc=i
+        xf=i+1
+        xf2=i+2
+        xf3=i+3
+      ELSE IF(i==Idim)THEN
+        xb3=Idim-3
+        xb2=Idim-2
+        xb=Idim-1
+        xc=i
+        xf=1
+        xf2=2
+        xf3=3
+      ELSE IF(i==Idim-1)THEN
+        xb3=Idim-4
+        xb2=Idim-3
+        xb=Idim-2
+        xc=i
+        xf=Idim
+        xf2=1
+        xf3=2
+      ELSE IF(i==Idim-2)THEN
+        xb3=Idim-5
+        xb2=Idim-4
+        xb=Idim-3
+        xc=i
+        xf=Idim-1
+        xf2=Idim
+        xf3=1
+      ELSE
+        xb3=i-3
+        xb2=i-2
+        xb=i-1
+        xc=i
+        xf=i+1
+        xf2=i+2
+        xf3=i+3
+      END IF
+   END SUBROUTINE index2
 
 END MODULE ModAdvection
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -438,7 +544,15 @@ PROGRAM  Main
   USE Class_WritetoGrads, Only : SchemeWriteCtl,SchemeWriteData,InitClass_WritetoGrads
    IMPLICIT NONE
    REAL               :: tend = 2000.!End time of simulation
-   CHARACTER(LEN=10) :: scheme      = 'RK3CS'  ! Advection scheme. Possible values: upstream, EULFS,RK4CS,RK3CS
+   CHARACTER(LEN=10) :: scheme      = 'RK2CS4'  ! Advection scheme. Possible values:
+                                               !scheme      =upstream 
+                                               !scheme      =EULFS
+                                               !scheme      =RK4CS
+                                               !scheme      =RK3CS
+                                               !scheme      =RK4CS4
+                                               !scheme      =RK3CS4
+                                               !scheme      =RK3CS4
+                                               !scheme      =RK1CS4
 
    INTEGER :: irec_err,unit2
 
@@ -478,14 +592,20 @@ PROGRAM  Main
           ! Propagate one time step
           if( scheme == 'RK4CS')THEN
              up = RungeKutta4('CentredSpace',u,t,DT,DeltaX)
+          else if( scheme == 'RK4CS4')THEN
+             up = RungeKutta4('Centred4thCS' ,u,t,DT,DeltaX)
           else if( scheme == 'RK4FS')THEN
              up = RungeKutta4('UpwindSpace' ,u,t,DT,DeltaX)
           else if( scheme == 'RK3CS')THEN
              up = RungeKutta3('CentredSpace',u,t,DT,DeltaX)
+          else if( scheme == 'RK3CS4')THEN
+             up = RungeKutta3('Centred4thCS',u,t,DT,DeltaX)
           else if( scheme == 'RK3FS')THEN
              up = RungeKutta3('UpwindSpace' ,u,t,DT,DeltaX)
           else if( scheme == 'RK2CS')THEN
              up = RungeKutta2('CentredSpace',u,t,DT,DeltaX)
+          else if( scheme == 'RK2CS4')THEN
+             up = RungeKutta2('Centred4thCS',u,t,DT,DeltaX)
           else if( scheme == 'RK2FS')THEN
              up = RungeKutta2('UpwindSpace' ,u,t,DT,DeltaX)
           else

@@ -257,15 +257,15 @@ CONTAINS
       INTEGER :: test
       DO i=1,Idim
          CALL index2(i,xb3,xb2,xb,xc,xf,xf2,xf3)
-         dudx(xc)  = ( (u(xb2) - u(xf2)) + 8.0*(u(xf) - u(xb)))/ &
-                                ((12*DeltaX)) 
+!         dudx(xc)  = ( (u(xb2) - u(xf2)) + 8.0*(u(xf) - u(xb)))/ &
+!                                ((12*DeltaX)) 
 
-!         dudx(xc) = ( (u(xc) - u(xb2) ))/(2.0*DeltaX)
+         dudx(xc) = ( (u(xc) - u(xb) ))/(DeltaX)
 
-         du2dx2(xc) = (-(u(xf2)+u(xb2)) + 16.0*u(xf) - 30.0*u(xc) + 16.0*u(xb)  )/&
-                                (12.0*(DeltaX**2))  
+!         du2dx2(xc) = (-(u(xf2)+u(xb2)) + 16.0*u(xf) - 30.0*u(xc) + 16.0*u(xb)  )/&
+!                                (12.0*(DeltaX**2))  
 
-!         du2dx2(xc) =(u(xf) - 2*u(xc) + u(xb))/(2*DeltaX*DeltaX)
+         du2dx2(xc) =(u(xf) - 2*u(xc) + u(xb))/(2*DeltaX*DeltaX)
  
          du3dx3(xc) = ((u(xf2) - u(xb2)) - 2.0*(u(xf) + u(xb)) )/&
                                 (2.0*(DeltaX**3))  
@@ -377,7 +377,7 @@ CONTAINS
       INTEGER, INTENT(IN   ) :: i
       INTEGER, INTENT(OUT  ) :: xb3,xb2,xb,xc,xf,xf2,xf3
       IF(i==1) THEN
-        xf3=Idim-2
+        xb3=Idim-2
         xb2=Idim-1
         xb=Idim
         xc=i
@@ -528,10 +528,10 @@ PROGRAM  Main
 !        test=Solve_LaxWendroff(termX,u)
 !        test=Solve_Inst_FTCS(termX,u)
 !        test=Solve_Estavel_CTCS(termX,u)
-        test=Solve_Estavel_4thCS(termX,u)
+!        test=Solve_Estavel_4thCS(termX,u)
 !        test=Solve_Instavel_4thCS(termX,u,um,'noFilter')
 !        test=Solve_Instavel_4thCS(termX,u,um,'FilterRA')
-!        test=Solve_Instavel_4thCS(termX,u,um,'FilterRAW')
+        test=Solve_Instavel_4thCS(termX,u,um,'FilterRAW')
 	
         DO i=1,Idim
            um(i) = u(i)
