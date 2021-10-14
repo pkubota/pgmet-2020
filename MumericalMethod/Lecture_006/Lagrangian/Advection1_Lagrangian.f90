@@ -12,7 +12,7 @@ MODULE Advection1D
  REAL      :: dt        = 0.01!Time step
  REAL      :: a         = 1.0!Advection velocity
  CHARACTER(LEN=10) :: init        = 'gaussian' ! Initial condition. Possible values: gaussian, sin, heavy
- CHARACTER(LEN=10) :: scheme      = 'SL1'  ! Advection scheme. Possible values: upstream, SL1,SL1M, SL3, SL3M
+ CHARACTER(LEN=10) :: scheme      = 'SL1M'  ! Advection scheme. Possible values: upstream, SL1,SL1M, SL3, SL3M
  CHARACTER(LEN=10) :: output_file = 'out'
  LOGICAL   :: final_plot   = .True.
  LOGICAL   :: write_output = .True.
@@ -103,6 +103,8 @@ CONTAINS
    N1=UBOUND(Q,DIM=1)
 
    !  Find grid-point below x
+   ! FLOOR(A) returns the greatest integer less than or equal to X.
+
     p = int(floor(xp/dx))
     IF(p>=N1)p=p-N1+1
     IF(p<=N0)p=N1+p
@@ -138,7 +140,43 @@ CONTAINS
         c = 1
         DO k=1,5 !for k in range(4):
             if( k /= i )THEN
+
+!       
+!                 xp-Xs(2)        xp-Xs(3)         xp-Xs(4)         xp-Xs(5)
+!   i=1      c= -------------*  ------------- *  ------------- *  -------------
+!                Xs(1)-Xs(2)     Xs(1)-Xs(3)      Xs(1)-Xs(4)      Xs(1)-Xs(5)
+!
                 c = c * ((xp-Xs(k))/(Xs(i)-Xs(k)))
+!       
+!                 xp-Xs(2)              xp-Xs(3)               xp-Xs(4)                xp-Xs(5)
+!   i=1     qq= -------------*Qs(1) * -------------*Qs(1) *  ------------- *Qs(1)*  -------------*Qs(1)
+!                Xs(1)-Xs(2)           Xs(1)-Xs(3)            Xs(1)-Xs(4)             Xs(1)-Xs(5)
+!
+
+!       
+!                 xp-Xs(1)              xp-Xs(3)               xp-Xs(4)                xp-Xs(5)
+!   i=2     qq= -------------*Qs(2) * -------------*Qs(2) *  ------------- *Qs(2)*  -------------*Qs(2)
+!                Xs(2)-Xs(1)           Xs(2)-Xs(3)            Xs(2)-Xs(4)             Xs(2)-Xs(5)
+!
+
+!       
+!                 xp-Xs(1)              xp-Xs(2)               xp-Xs(4)                xp-Xs(5)
+!   i=3     qq= -------------*Qs(3) * -------------*Qs(3) *  ------------- *Qs(3)*  -------------*Qs(3)
+!                Xs(3)-Xs(1)           Xs(3)-Xs(2)            Xs(3)-Xs(4)             Xs(3)-Xs(5)
+!
+
+!       
+!                 xp-Xs(1)              xp-Xs(2)               xp-Xs(3)                xp-Xs(5)
+!   i=4     qq= -------------*Qs(4) * -------------*Qs(4) *  ------------- *Qs(3)*  -------------*Qs(4)
+!                Xs(4)-Xs(1)           Xs(4)-Xs(2)            Xs(4)-Xs(3)             Xs(4)-Xs(5)
+!
+
+!       
+!                 xp-Xs(1)              xp-Xs(2)               xp-Xs(4)                xp-Xs(4)
+!   i=5     qq= -------------*Qs(5) * -------------*Qs(5) *  ------------- *Qs(5)*  -------------*Qs(5)
+!                Xs(5)-Xs(1)           Xs(5)-Xs(2)            Xs(5)-Xs(4)             Xs(5)-Xs(4)
+!
+
                 qq = qq + c*Qs(i)
             END IF
         END DO
@@ -169,7 +207,7 @@ CONTAINS
    INTEGER   :: i,k
    REAL      :: Xs(1:2)
    REAL      :: Qs(1:2)
-   REAL      :: c1
+   REAL      :: alfa
    REAL      :: c2
    REAL      :: qq
    REAL      :: qmax
@@ -186,36 +224,36 @@ CONTAINS
        if( p>=N1)THEN
           Xs(1:2) = (/ X(N1), X(N1-1  ) /)
           Qs(1:2) = (/ Q(N1), Q(N1-1  ) /)
-          c1      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
+          alfa      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
        else if( p<=N0)THEN
           Xs(1:2) = (/ X(N0), X(N1) /)
           Qs(1:2) = (/ Q(N0), Q(N1) /)
-          c1      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
+          alfa      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
        else
           Xs(1:2) = (/ X(p), X(p-1) /)
           Qs(1:2) = (/ Q(p), Q(p-1) /)
-          c1      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
+          alfa      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
        end if    
     ELSE
        if( p>=N1)THEN
           Xs(1:2) = (/ X(N1), X(N1-1  ) /)
           Qs(1:2) = (/ Q(N1), Q(N1-1  ) /)
-          c1      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
+          alfa      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
        else if( p<=N0)THEN
           Xs(1:2) = (/ X(N0), X(N1) /)
           Qs(1:2) = (/ Q(N0), Q(N1) /)
-          c1      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
+          alfa      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
        else
           Xs(1:2) = (/ X(p), X(p-1) /)
           Qs(1:2) = (/ Q(p), Q(p-1) /)
-          c1      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
+          alfa      = ABS(xp-Xs(2))/ABS(Xs(1)-Xs(2))
        end if    
     END IF
     IF(Qs(1)> 1e12)return
 
     !### Add interpolation code
-    c2=1-c1
-    qq = c1*Qs(1)+c2*Qs(2)
+    c2=1-alfa
+    qq = alfa*Qs(1)+c2*Qs(2)
     IF(present(monotone))THEN
     if( monotone )THEN
         qmax = max(Qs(1),Qs(2))
