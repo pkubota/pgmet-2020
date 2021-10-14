@@ -139,7 +139,9 @@ PROGRAM t_specderiv
   Grid_Qc=Qc
   Grid_Qm=Qc
   Grid_Qp=Qc
-  Spec_Qc=Qc
+
+  !f(x) = cos(xj
+  Spec_Qc=Qc  ! =COS(x(i)) 
 
   irec=0
   test=SchemeWriteData(irec)
@@ -169,7 +171,7 @@ PROGRAM t_specderiv
       !          1    \
       !   ffn = ----   \  f(xj) * exp (i*n*xj)
       !          N     /
-      !              / 
+      !               / 
       !              -------
       !                 j=0
 
@@ -188,18 +190,29 @@ PROGRAM t_specderiv
       !              -------
       !                 n=-N/2 
       !
-      !
-      !Spec_Qc =  (i*n*ffn)  eh coeficiente de fourrier para f´ 
-      !
+      !          
+      !           
+      !Spec_Qc =    f(xj) 
+      !            
       !
       CALL rfftf(nn,Spec_Qc,trig)
-
+      !
+      !             N-1 
+      !           -------
+      !           \
+      !Spec_Qc =   \  f(xj) * exp (i*n*xj) 
+      !            /
+      !           / 
+      !          -------
+      !              j=0
       DO i= 0, nn-1
          Tend_Qp(i)=Spec_Qc(i)
       END DO
-
+      !
       !--Set 0 to the coefficient of nn/2 mode 
+      !
       Tend_Qp(nn-1) = 0.0
+      !
       !--Multiply and swap the Fourier coefficients for first derivative
       !
       !                 N/2 -1 
@@ -214,16 +227,15 @@ PROGRAM t_specderiv
       !
       ii = 1
       DO i= 1, nn-3, 2
-      !                 N/2 -1 
-      !              -------
-      !               \
-      !Tend_Qp=  ----- \  (i*n)*f(xj) * exp (i*n*x)
-      !                /
-      !              / 
-      !              -------
-      !                 n=-N/2 
-      !
-
+        !                 N/2 -1 
+        !              -------
+        !               \
+        !Tend_Qp=  ----- \  (i*n)*f(xj) * exp (i*n*x)
+        !                /
+        !              / 
+        !              -------
+        !                 n=-N/2 
+        !
          tmp          = -ii*Tend_Qp(i+1)
          Tend_Qp(i+1) =  ii*Tend_Qp(i)
          Tend_Qp(i)   =  tmp
