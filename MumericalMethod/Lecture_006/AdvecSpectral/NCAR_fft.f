@@ -750,7 +750,8 @@ C
       RETURN                                                                    
       END                                                                       
       SUBROUTINE RFFTB1 (N,C,CH,WA,IFAC)                                        
-      DIMENSION       CH(*)      ,C(*)       ,WA(*)      ,IFAC(*)               
+      DIMENSION       CH(*)      ,C(*)       ,WA(*)      
+      REAL :: IFAC(*)               
       NF = IFAC(2)                                                              
       NA = 0                                                                    
       L1 = 1                                                                    
@@ -871,7 +872,8 @@ C
       RETURN                                                                    
       END                                                                       
       SUBROUTINE RFFTF1 (N,C,CH,WA,IFAC)                                        
-      DIMENSION       CH(*)      ,C(*)       ,WA(*)      ,IFAC(*)               
+      DIMENSION       CH(*)      ,C(*)       ,WA(*)      
+      REAL :: IFAC(*)               
       NF = IFAC(2)                                                              
       NA = 1                                                                    
       L2 = N                                                                    
@@ -956,7 +958,8 @@ C
       RETURN                                                                    
       END                                                                       
       SUBROUTINE RFFTI1 (N,WA,IFAC)                                             
-      DIMENSION       WA(*)      ,IFAC(*)    ,NTRYH(4)                          
+      DIMENSION       WA(*)          ,NTRYH(4)
+      REAL :: IFAC(*)                          
       DATA NTRYH(1),NTRYH(2),NTRYH(3),NTRYH(4)/4,2,3,5/                         
       NL = N                                                                    
       NF = 0                                                                    

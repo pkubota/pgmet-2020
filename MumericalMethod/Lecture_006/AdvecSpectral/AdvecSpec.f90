@@ -8,6 +8,8 @@ MODULE Class_Fields
   INTEGER, PUBLIC      , PARAMETER  :: r4=4
   REAL,PUBLIC ,ALLOCATABLE ::  Spec_Qc(:)
   REAL,PUBLIC ,ALLOCATABLE ::  Spec_Qm(:)
+  REAL,PUBLIC ,ALLOCATABLE ::  Spec_dqdx(:)
+  REAL,PUBLIC ,ALLOCATABLE ::  dqdx(:)
   REAL,PUBLIC ,ALLOCATABLE ::  Tend_Qp(:)
   REAL,PUBLIC ,ALLOCATABLE ::  Grid_Qc(:)
   REAL,PUBLIC ,ALLOCATABLE ::  Grid_Qm(:)
@@ -29,13 +31,15 @@ CONTAINS
     Uvel=Uvel0
     ALLOCATE (Spec_Qc(0:nn-1))
     ALLOCATE (Spec_Qm(0:nn-1))
+    ALLOCATE (Spec_dqdx(0:nn-1))
+    ALLOCATE (dqdx   (0:nn-1))  
     ALLOCATE (Tend_Qp(0:nn-1))
     ALLOCATE (Grid_Qc(0:nn-1))
     ALLOCATE (Grid_Qm(0:nn-1))
     ALLOCATE (Grid_Qp(0:nn-1))
-    ALLOCATE (Qc(0:nn-1))
-    ALLOCATE (x(0:nn-1))
-    ALLOCATE (trig(2*nn+15))
+    ALLOCATE (Qc     (0:nn-1))
+    ALLOCATE (x      (0:nn-1))
+    ALLOCATE (trig   (2*nn+15))
   END SUBROUTINE Init_Class_Fields
   !------------------------------------------------------------------------------------------
 END MODULE Class_Fields
@@ -43,7 +47,7 @@ END MODULE Class_Fields
 
  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE Class_WritetoGrads
- USE Class_Fields, ONLY: Spec_Qc,Spec_Qm,Tend_Qp,Grid_Qc,Grid_Qm,Grid_Qp,nn
+ USE Class_Fields, ONLY: Spec_Qc,Spec_Qm,dqdx,Spec_dqdx,Grid_Qc,Grid_Qm,Grid_Qp,nn
  IMPLICIT NONE
  PRIVATE
  INTEGER, PUBLIC      , PARAMETER  :: r8=8
@@ -109,7 +113,7 @@ END MODULE Class_WritetoGrads
 PROGRAM t_specderiv
   USE Class_WritetoGrads, ONLY :InitClass_WritetoGrads, &
        SchemeWriteData, SchemeWriteCtl
-  USE Class_Fields, ONLY :Init_Class_Fields,Spec_Qc,Spec_Qm,Tend_Qp,Grid_Qc,Grid_Qm,Grid_Qp,Uvel,Qc,x,trig,nn
+  USE Class_Fields, ONLY :Init_Class_Fields,Spec_Qc,Spec_Qm,dqdx,Spec_dqdx,Tend_Qp,Grid_Qc,Grid_Qm,Grid_Qp,Uvel,Qc,x,trig,nn
   ! Example of computing first derivative of a real function 
   ! using discrete spectral transform and calling NCAR FFTPACK
 
@@ -141,49 +145,128 @@ PROGRAM t_specderiv
   test=SchemeWriteData(irec)
 
   DO it=1,ninteraction
+      !
       !--Forward transform to compute the complex coefficients
-     CALL rffti(nn  ,trig)
-     CALL rfftf(nn,Spec_Qc,trig)
+      !
+      !     RFFTI INITIALIZES THE ARRAY WSAVE WHICH IS USED IN             
+      !     BOTH RFFTF AND RFFTB. THE PRIME FACTORIZATION OF N TOGETHER WITH          
+      !     A TABULATION OF THE TRIGONOMETRIC FUNCTIONS ARE COMPUTED AND              
+      !     STORED IN WSAVE.
+      !
+      !                 N/2 -1                      N-1  
+      !              -------                       -------
+      !              \                            \
+      !   f(j)=       \  (ffn) * exp (i*n*xj)  =   \  (ffn) * exp (i*n*xj)
+      !               /                            /
+      !              /                            / 
+      !              -------                      -------
+      !                 n=-N/2                      n=0
+      !
+      !where ffn is the discrete Fourier transform:
+      !
+      !                 N-1 
+      !               -------
+      !          1    \
+      !   ffn = ----   \  f(xj) * exp (i*n*xj)
+      !          N     /
+      !              / 
+      !              -------
+      !                 j=0
 
-     DO i= 0, nn-1
-        Tend_Qp(i)=Spec_Qc(i)
-     END DO
+      !
+      CALL rffti(nn  ,trig)
+      !     COMPUTES THE FOURIER COEFFICIENTS OF A REAL              
+      !     PERODIC SEQUENCE (FOURIER ANALYSIS). THE TRANSFORM IS DEFINED             
+      !     BELOW AT OUTPUT PARAMETER R.
+      !
+      !                 N/2 -1 
+      !              -------
+      ! df(x)        \
+      !------ =       \  (i*n)*ffn * exp (i*n*x)
+      !  dx           /
+      !              / 
+      !              -------
+      !                 n=-N/2 
+      !
+      !
+      !Spec_Qc =  (i*n*ffn)  eh coeficiente de fourrier para f´ 
+      !
+      !
+      CALL rfftf(nn,Spec_Qc,trig)
+
+      DO i= 0, nn-1
+         Tend_Qp(i)=Spec_Qc(i)
+      END DO
 
       !--Set 0 to the coefficient of nn/2 mode 
       Tend_Qp(nn-1) = 0.0
       !--Multiply and swap the Fourier coefficients for first derivative
-     ii = 1
-     DO i= 1, nn-3, 2
-        tmp          = -ii*Tend_Qp(i+1)
-        Tend_Qp(i+1) =  ii*Tend_Qp(i)
-        Tend_Qp(i)   =  tmp
-        ii = ii + 1
-     END DO
-     Tend_Qp = Tend_Qp/nn
+      !
+      !                 N/2 -1 
+      !              -------
+      !              \
+      !Tend_Qp=       \  (i*n*ffn) exp (i*n*x)
+      !               /
+      !              / 
+      !              -------
+      !                 n=-N/2 
+      !
+      !
+      ii = 1
+      DO i= 1, nn-3, 2
+      !                 N/2 -1 
+      !              -------
+      !               \
+      !Tend_Qp=  ----- \  (i*n)*f(xj) * exp (i*n*x)
+      !                /
+      !              / 
+      !              -------
+      !                 n=-N/2 
+      !
+
+         tmp          = -ii*Tend_Qp(i+1)
+         Tend_Qp(i+1) =  ii*Tend_Qp(i)
+         Tend_Qp(i)   =  tmp
+         ii = ii + 1
+      END DO
+      !                    N/2 -1 
+      !                   -------
+      !               1   \
+      !Spec_dqdx =  -----  \  (i*n)*f(xj) * exp (i*n*x)
+      !               N    /
+      !                   / 
+      !                   -------
+      !                    n=-N/2 
+      !
+      Spec_dqdx = Tend_Qp/nn
 
       !--Backward transform
-     CALL rfftb(nn,Tend_Qp,trig)
-     !
-     !
-     !  Qp - Qc           dQc
-     !---------- = - U * -----
-     !     Dt              dx
-     !
-     !
-     Grid_Qp  = Grid_Qc - (uVel * Dt)  * Tend_Qp
-     Grid_Qc=Grid_Qp
-     Grid_Qm=Grid_Qc
-     Spec_Qc=Grid_Qc
-     test=SchemeWriteData(irec)
+      !    COMPUTES THE REAL PERODIC SEQUENCE FROM ITS              
+      !    FOURIER COEFFICIENTS (FOURIER SYNTHESIS). THE TRANSFORM IS DEFINED        
+      !    BELOW AT OUTPUT PARAMETER R. 
+      CALL rfftb(nn,Spec_dqdx,trig)
+      dqdx=Spec_dqdx
+      !
+      !
+      !  Qp - Qc           dQc
+      !---------- = - U * -----
+      !     Dt              dx
+      !
+      !
+      Grid_Qp  = Grid_Qc - (uVel * Dt)  * dqdx
+      Grid_Qc=Grid_Qp
+      Grid_Qm=Grid_Qc
+      Spec_Qc=Grid_Qc
+      test=SchemeWriteData(irec)
 
-     !-Output and compare with exact values
+      !-Output and compare with exact values
 
-     WRITE(*,*) '          j    spectral        exact'
-     DO i= 0, nn-1
-        WRITE(*,*) i, Grid_Qc(i), Qc(i)
-     END DO
-     WRITE(*,*) ''
-     WRITE(*,*) 'Max error: ', MAXVAL(ABS(Grid_Qc-Qc))
+      WRITE(*,*) '          j    spectral        exact'
+      DO i= 0, nn-1
+         WRITE(*,*) i, Grid_Qc(i), Qc(i)
+      END DO
+      WRITE(*,*) ''
+      WRITE(*,*) 'Max error: ', MAXVAL(ABS(Grid_Qc-Qc))
   END DO   !DO it=1,iteration
   test=SchemeWriteCtl(ninteraction)
 
